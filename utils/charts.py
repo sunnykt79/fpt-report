@@ -143,3 +143,94 @@ def plot_prepaid_stacked_bar(df, top_n=10):
     )
     fig.update_traces(marker_line_color='white', marker_line_width=0.5)
     return fig
+
+def plot_department_pttb_bar(df):
+    if len(df) == 0 or 'Phong' not in df.columns:
+        return px.bar(title="Không có dữ liệu phòng")
+
+    department_counts = df['Phong'].fillna("Khác").value_counts().reset_index()
+    department_counts.columns = ['Phòng', 'Số PTTB']
+
+    fig = px.bar(
+        department_counts,
+        y='Phòng',
+        x='Số PTTB',
+        orientation='h',
+        title='Đóng góp PTTB theo phòng',
+        text='Số PTTB',
+        color='Số PTTB',
+        color_continuous_scale='Blues',
+        labels={'Phòng': 'Phòng', 'Số PTTB': 'Số PTTB'},
+    )
+    fig.update_layout(
+        template='plotly_white',
+        yaxis={'categoryorder': 'total ascending'},
+        coloraxis_showscale=False,
+    )
+    return fig
+
+def plot_employee_product_contribution(df, top_n=20):
+    if len(df) == 0:
+        return px.bar(title="Không có dữ liệu nhân sự")
+
+    net_counts = (
+        df['Sale']
+        .fillna("Khác")
+        .value_counts()
+        .rename_axis('Nhan_su')
+        .reset_index(name='PTTB Net')
+    )
+
+    pay_sale = df['Pay_Sale'] if 'Pay_Sale' in df.columns else df['Sale']
+    pay_person = pay_sale.fillna(df['Sale']).fillna("Khác")
+    phan_loai = df['Phan_loai'].astype(str).str.upper()
+    tv_mask = phan_loai.str.contains('VIP', regex=False, na=False)
+    vvip_mask = phan_loai.str.contains(r'V\.VIP', regex=True, na=False)
+
+    tv_counts = (
+        pay_person[tv_mask]
+        .value_counts()
+        .rename_axis('Nhan_su')
+        .reset_index(name='PTTB Truyền hình')
+    )
+    vvip_counts = (
+        pay_person[vvip_mask]
+        .value_counts()
+        .rename_axis('Nhan_su')
+        .reset_index(name='PTTB V.Vip')
+    )
+
+    summary = net_counts.merge(tv_counts, on='Nhan_su', how='outer').merge(vvip_counts, on='Nhan_su', how='outer')
+    summary = summary.fillna(0)
+    for col in ['PTTB Net', 'PTTB Truyền hình', 'PTTB V.Vip']:
+        summary[col] = summary[col].astype(int)
+
+    summary['Tổng đóng góp'] = summary[['PTTB Net', 'PTTB Truyền hình', 'PTTB V.Vip']].sum(axis=1)
+    summary = summary.sort_values('Tổng đóng góp', ascending=False).head(top_n)
+
+    chart_data = summary.melt(
+        id_vars='Nhan_su',
+        value_vars=['PTTB Net', 'PTTB Truyền hình', 'PTTB V.Vip'],
+        var_name='Loại PTTB',
+        value_name='Số PTTB',
+    )
+
+    fig = px.bar(
+        chart_data,
+        x='Nhan_su',
+        y='Số PTTB',
+        color='Loại PTTB',
+        barmode='group',
+        title=f'Đóng góp PTTB Net, Truyền hình và V.Vip theo nhân sự (Top {top_n})',
+        text='Số PTTB',
+        category_orders={'Nhan_su': list(summary['Nhan_su'])},
+        color_discrete_map={
+            'PTTB Net': '#4E79A7',
+            'PTTB Truyền hình': '#F28E2B',
+            'PTTB V.Vip': '#E15759',
+        },
+        labels={'Nhan_su': 'Nhân sự', 'Số PTTB': 'Số PTTB'},
+    )
+    fig.update_layout(template='plotly_white', legend_title_text='Loại PTTB')
+    fig.update_xaxes(tickangle=-35)
+    return fig

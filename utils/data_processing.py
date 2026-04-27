@@ -3,8 +3,9 @@ import datetime
 import pandas as pd
 
 
-INTERNET_USECOLS = "J,O,P,Q,R,T,Y,AA"
+INTERNET_USECOLS = "E,J,O,P,Q,R,T,Y,AA"
 INTERNET_COLUMNS = [
+    "Phong",
     "Hop_dong",
     "Ngay_tao",
     "Ngay_online",
@@ -15,8 +16,8 @@ INTERNET_COLUMNS = [
     "Hinh_thuc_TT",
 ]
 
-PAY_USECOLS = "H,L"
-PAY_COLUMNS = ["Phan_loai", "Hop_dong_Pay"]
+PAY_USECOLS = "H,L,T"
+PAY_COLUMNS = ["Phan_loai", "Hop_dong_Pay", "Pay_Sale"]
 
 
 def _read_internet_sheet(source, sheet_name=0):
@@ -43,6 +44,8 @@ def _prepare_data(df_internet, df_pay):
     df_internet["Ngay_huy"] = pd.to_datetime(df_internet["Ngay_huy"], errors="coerce")
 
     # Source column T is still used as the reporting area after the district-level change.
+    df_internet["Phong"] = df_internet["Phong"].fillna("Khác")
+    df_internet["Phong"] = df_internet["Phong"].replace(["Không xác định", "", " "], "Khác")
     df_internet["Xa_Phuong"] = df_internet["Xa_Phuong"].fillna("Khác")
     df_internet["Xa_Phuong"] = df_internet["Xa_Phuong"].replace(["Không xác định", "", " "], "Khác")
 

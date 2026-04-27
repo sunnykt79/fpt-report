@@ -2,6 +2,8 @@ import streamlit as st
 
 from utils.charts import (
     plot_avg_deploy_by_region,
+    plot_department_pttb_bar,
+    plot_employee_product_contribution,
     plot_prepaid_stacked_bar,
     plot_status_pie,
     plot_top_regions_bar,
@@ -105,8 +107,10 @@ try:
     fig_bar_region = plot_top_regions_bar(filtered_df)
     fig_bar_deploy = plot_avg_deploy_by_region(filtered_df)
     fig_stack_prepaid = plot_prepaid_stacked_bar(filtered_df)
+    fig_department = plot_department_pttb_bar(filtered_df)
+    fig_employee = plot_employee_product_contribution(filtered_df)
 
-    figs = [fig_pie, fig_bar_region, fig_bar_deploy, fig_stack_prepaid]
+    figs = [fig_pie, fig_bar_region, fig_bar_deploy, fig_stack_prepaid, fig_department, fig_employee]
 
     row1_col1, row1_col2 = st.columns(2)
     with row1_col1:
@@ -119,6 +123,12 @@ try:
         st.plotly_chart(fig_bar_deploy, use_container_width=True)
     with row2_col2:
         st.plotly_chart(fig_stack_prepaid, use_container_width=True)
+
+    row3_col1, row3_col2 = st.columns(2)
+    with row3_col1:
+        st.plotly_chart(fig_department, use_container_width=True)
+    with row3_col2:
+        st.plotly_chart(fig_employee, use_container_width=True)
 
     st.sidebar.header("Xuất Báo Cáo")
 

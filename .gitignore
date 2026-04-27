@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Data files (Optional: keep if you want to upload sample data)
+*.xlsx
+*.xls
+*.docx
+*.pdf
+*.pptx
+
+# OS files
+.DS_Store
+Thumbs.db

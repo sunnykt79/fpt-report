@@ -2,6 +2,7 @@ streamlit
 pandas
 openpyxl
 plotly
+kaleido==0.2.1
 python-docx
 fpdf2
 python-pptx

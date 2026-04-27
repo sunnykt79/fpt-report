@@ -86,7 +86,22 @@ def plot_prepaid_stacked_bar(df, top_n=10):
         
     # Get top regions by volume
     top_regions = df['Xa_Phuong'].value_counts().nlargest(top_n).index
-    df_top = df[df['Xa_Phuong'].isin(top_regions)]
+    df_top = df[df['Xa_Phuong'].isin(top_regions)].copy()
+
+    prepaid_order = [
+        "Trả sau (Từng tháng)",
+        "1 tháng",
+        "3 tháng",
+        "6 tháng",
+        "13 tháng (1 năm)",
+    ]
+    prepaid_colors = {
+        "Trả sau (Từng tháng)": "#4E79A7",
+        "1 tháng": "#59A14F",
+        "3 tháng": "#F28E2B",
+        "6 tháng": "#E15759",
+        "13 tháng (1 năm)": "#B07AA1",
+    }
     
     # Clean up Tra_truoc and Map values
     def map_prepaid(val):
@@ -110,6 +125,21 @@ def plot_prepaid_stacked_bar(df, top_n=10):
         y='Số lượng', 
         color='Tra_truoc',
         title=f'Tỷ lệ trả trước theo khu vực (Top {top_n})',
-        barmode='stack'
+        barmode='stack',
+        category_orders={
+            'Xa_Phuong': list(top_regions),
+            'Tra_truoc': prepaid_order,
+        },
+        color_discrete_map=prepaid_colors,
+        labels={
+            'Xa_Phuong': 'Khu vực',
+            'Tra_truoc': 'Trả trước',
+            'Số lượng': 'Số lượng',
+        },
     )
+    fig.update_layout(
+        template='plotly_white',
+        legend_title_text='Trả trước',
+    )
+    fig.update_traces(marker_line_color='white', marker_line_width=0.5)
     return fig

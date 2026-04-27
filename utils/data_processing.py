@@ -77,9 +77,9 @@ def calculate_metrics(df):
     
     # V.Vip / Vip count - Corrected logic
     phan_loai = df['Phan_loai'].astype(str).str.upper()
-    vvip_count = phan_loai.str.contains('V\.VIP', regex=True).sum()
+    vvip_count = phan_loai.str.contains(r'V\.VIP', regex=True).sum()
     # Vip count: matches VIP but not preceded by V.
-    vip_count = phan_loai.str.contains('(?<!V\.)VIP', regex=True).sum()
+    vip_count = phan_loai.str.contains(r'(?<!V\.)VIP', regex=True).sum()
     
     # Online Rate
     online_count = df['Ngay_online'].notna().sum()

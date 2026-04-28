@@ -39,9 +39,12 @@ def _plot_rate_ranking(df, group_col, date_col, title, group_label, rate_label, 
     if len(df) == 0 or group_col not in df.columns or date_col not in df.columns:
         return px.bar(title="Không có dữ liệu")
 
+    group_values = df[group_col].fillna("Khác").astype(str).str.strip()
+    group_values = group_values.replace("", "Khác")
+
     grouped = (
         df.assign(
-            _group=df[group_col].fillna("Khác"),
+            _group=group_values,
             _hit=df[date_col].notna(),
         )
         .groupby("_group", dropna=False)

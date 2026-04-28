@@ -2,7 +2,11 @@ import streamlit as st
 
 from utils.charts import (
     plot_avg_deploy_by_region,
+    plot_department_cancel_rate_ranking,
+    plot_department_online_rate_ranking,
     plot_department_pttb_bar,
+    plot_employee_cancel_rate_ranking,
+    plot_employee_online_rate_ranking,
     plot_employee_product_contribution,
     plot_prepaid_stacked_bar,
     plot_status_pie,
@@ -109,8 +113,23 @@ try:
     fig_stack_prepaid = plot_prepaid_stacked_bar(filtered_df)
     fig_department = plot_department_pttb_bar(filtered_df)
     fig_employee = plot_employee_product_contribution(filtered_df)
+    fig_department_online = plot_department_online_rate_ranking(filtered_df)
+    fig_employee_online = plot_employee_online_rate_ranking(filtered_df)
+    fig_department_cancel = plot_department_cancel_rate_ranking(filtered_df)
+    fig_employee_cancel = plot_employee_cancel_rate_ranking(filtered_df)
 
-    figs = [fig_pie, fig_bar_region, fig_bar_deploy, fig_stack_prepaid, fig_department, fig_employee]
+    figs = [
+        fig_pie,
+        fig_bar_region,
+        fig_bar_deploy,
+        fig_stack_prepaid,
+        fig_department,
+        fig_employee,
+        fig_department_online,
+        fig_employee_online,
+        fig_department_cancel,
+        fig_employee_cancel,
+    ]
 
     row1_col1, row1_col2 = st.columns(2)
     with row1_col1:
@@ -129,6 +148,18 @@ try:
         st.plotly_chart(fig_department, use_container_width=True)
     with row3_col2:
         st.plotly_chart(fig_employee, use_container_width=True)
+
+    row4_col1, row4_col2 = st.columns(2)
+    with row4_col1:
+        st.plotly_chart(fig_department_online, use_container_width=True)
+    with row4_col2:
+        st.plotly_chart(fig_employee_online, use_container_width=True)
+
+    row5_col1, row5_col2 = st.columns(2)
+    with row5_col1:
+        st.plotly_chart(fig_department_cancel, use_container_width=True)
+    with row5_col2:
+        st.plotly_chart(fig_employee_cancel, use_container_width=True)
 
     st.sidebar.header("Xuất Báo Cáo")
 

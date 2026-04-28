@@ -35,6 +35,105 @@ def plot_status_pie(df):
     )
     return fig
 
+def _plot_rate_ranking(df, group_col, date_col, title, group_label, rate_label, top_n=20, color_scale='Greens'):
+    if len(df) == 0 or group_col not in df.columns or date_col not in df.columns:
+        return px.bar(title="Không có dữ liệu")
+
+    grouped = (
+        df.assign(
+            _group=df[group_col].fillna("Khác"),
+            _hit=df[date_col].notna(),
+        )
+        .groupby("_group", dropna=False)
+        .agg(Tong_PTTB=("_hit", "size"), So_luong=("_hit", "sum"))
+        .reset_index()
+    )
+    grouped["Ty_le"] = grouped["So_luong"] / grouped["Tong_PTTB"] * 100
+    grouped = grouped.sort_values(["Ty_le", "So_luong", "Tong_PTTB"], ascending=False).head(top_n)
+    grouped["Nhan_hien_thi"] = grouped.apply(
+        lambda row: f"{row['Ty_le']:.1f}% ({int(row['So_luong'])}/{int(row['Tong_PTTB'])})",
+        axis=1,
+    )
+
+    fig = px.bar(
+        grouped,
+        y="_group",
+        x="Ty_le",
+        orientation="h",
+        title=title,
+        text="Nhan_hien_thi",
+        color="Ty_le",
+        color_continuous_scale=color_scale,
+        labels={
+            "_group": group_label,
+            "Ty_le": rate_label,
+            "Nhan_hien_thi": rate_label,
+        },
+        hover_data={
+            "_group": False,
+            "Ty_le": ":.1f",
+            "So_luong": True,
+            "Tong_PTTB": True,
+            "Nhan_hien_thi": False,
+        },
+    )
+    fig.update_layout(
+        template="plotly_white",
+        yaxis={"categoryorder": "total ascending"},
+        coloraxis_showscale=False,
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_xaxes(range=[0, max(105, grouped["Ty_le"].max() * 1.15 if len(grouped) else 100)])
+    return fig
+
+def plot_department_online_rate_ranking(df, top_n=20):
+    return _plot_rate_ranking(
+        df,
+        "Phong",
+        "Ngay_online",
+        f"Tỷ lệ online theo phòng (Top {top_n})",
+        "Phong",
+        "Tỷ lệ online (%)",
+        top_n=top_n,
+        color_scale="Greens",
+    )
+
+def plot_employee_online_rate_ranking(df, top_n=20):
+    return _plot_rate_ranking(
+        df,
+        "Sale",
+        "Ngay_online",
+        f"Xếp hạng nhân sự theo tỷ lệ online (Top {top_n})",
+        "Nhân sự",
+        "Tỷ lệ online (%)",
+        top_n=top_n,
+        color_scale="Greens",
+    )
+
+def plot_department_cancel_rate_ranking(df, top_n=20):
+    return _plot_rate_ranking(
+        df,
+        "Phong",
+        "Ngay_huy",
+        f"Tỷ lệ hủy TSD theo phòng (Top {top_n})",
+        "Phong",
+        "Tỷ lệ hủy TSD (%)",
+        top_n=top_n,
+        color_scale="Reds",
+    )
+
+def plot_employee_cancel_rate_ranking(df, top_n=20):
+    return _plot_rate_ranking(
+        df,
+        "Sale",
+        "Ngay_huy",
+        f"Xếp hạng nhân sự theo tỷ lệ hủy TSD (Top {top_n})",
+        "Nhân sự",
+        "Tỷ lệ hủy TSD (%)",
+        top_n=top_n,
+        color_scale="Reds",
+    )
+
 def plot_top_regions_bar(df, top_n=10):
     if len(df) == 0:
         return px.bar(title="Không có dữ liệu")

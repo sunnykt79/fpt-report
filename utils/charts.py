@@ -2,7 +2,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 
-def plot_status_pie(df):
+
+def _horizontal_yaxis_order(sort_ascending):
+    return "total descending" if sort_ascending else "total ascending"
+
+
+def _rank_limited(data, sort_by, top_n, sort_ascending=False):
+    return data.sort_values(sort_by, ascending=sort_ascending).head(top_n)
+
+
+def plot_status_pie(df, sort_ascending=False):
     # Cơ cấu trạng thái (Online / Hủy / Đang chờ)
     # Online: Ngay_online not null
     # Hủy: Ngay_huy not null (but not online)
@@ -23,6 +32,7 @@ def plot_status_pie(df):
     status_series = df.apply(get_status, axis=1)
     status_counts = status_series.value_counts().reset_index()
     status_counts.columns = ['Trạng thái', 'Số lượng']
+    status_counts = status_counts.sort_values('Số lượng', ascending=sort_ascending)
     
     fig = px.pie(
         status_counts, 
@@ -33,9 +43,20 @@ def plot_status_pie(df):
         color_discrete_map={'Online': '#28a745', 'Hủy': '#dc3545', 'Đang chờ': '#ffc107'},
         hole=0.4
     )
+    fig.update_traces(sort=False)
     return fig
 
-def _plot_rate_ranking(df, group_col, date_col, title, group_label, rate_label, top_n=20, color_scale='Greens'):
+def _plot_rate_ranking(
+    df,
+    group_col,
+    date_col,
+    title,
+    group_label,
+    rate_label,
+    top_n=20,
+    color_scale='Greens',
+    sort_ascending=False,
+):
     if len(df) == 0 or group_col not in df.columns or date_col not in df.columns:
         return px.bar(title="Không có dữ liệu")
 
@@ -52,7 +73,10 @@ def _plot_rate_ranking(df, group_col, date_col, title, group_label, rate_label, 
         .reset_index()
     )
     grouped["Ty_le"] = grouped["So_luong"] / grouped["Tong_PTTB"] * 100
-    grouped = grouped.sort_values(["Ty_le", "So_luong", "Tong_PTTB"], ascending=False).head(top_n)
+    grouped = grouped.sort_values(
+        ["Ty_le", "So_luong", "Tong_PTTB"],
+        ascending=sort_ascending,
+    ).head(top_n)
     grouped["Nhan_hien_thi"] = grouped.apply(
         lambda row: f"{row['Ty_le']:.1f}% ({int(row['So_luong'])}/{int(row['Tong_PTTB'])})",
         axis=1,
@@ -82,14 +106,20 @@ def _plot_rate_ranking(df, group_col, date_col, title, group_label, rate_label, 
     )
     fig.update_layout(
         template="plotly_white",
-        yaxis={"categoryorder": "total ascending"},
+        height=430,
+        margin={"l": 145, "r": 95, "t": 58, "b": 58},
+        yaxis={"categoryorder": _horizontal_yaxis_order(sort_ascending), "automargin": True},
         coloraxis_showscale=False,
+        font={"size": 11},
+        title={"font": {"size": 15}},
     )
     fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_yaxes(tickfont={"size": 10})
+    fig.update_xaxes(tickfont={"size": 10}, title_font={"size": 12})
     fig.update_xaxes(range=[0, max(105, grouped["Ty_le"].max() * 1.15 if len(grouped) else 100)])
     return fig
 
-def plot_department_online_rate_ranking(df, top_n=20):
+def plot_department_online_rate_ranking(df, top_n=10, sort_ascending=False):
     return _plot_rate_ranking(
         df,
         "Phong",
@@ -99,9 +129,10 @@ def plot_department_online_rate_ranking(df, top_n=20):
         "Tỷ lệ online (%)",
         top_n=top_n,
         color_scale="Greens",
+        sort_ascending=sort_ascending,
     )
 
-def plot_employee_online_rate_ranking(df, top_n=20):
+def plot_employee_online_rate_ranking(df, top_n=10, sort_ascending=False):
     return _plot_rate_ranking(
         df,
         "Sale",
@@ -111,9 +142,10 @@ def plot_employee_online_rate_ranking(df, top_n=20):
         "Tỷ lệ online (%)",
         top_n=top_n,
         color_scale="Greens",
+        sort_ascending=sort_ascending,
     )
 
-def plot_department_cancel_rate_ranking(df, top_n=20):
+def plot_department_cancel_rate_ranking(df, top_n=10, sort_ascending=False):
     return _plot_rate_ranking(
         df,
         "Phong",
@@ -123,9 +155,10 @@ def plot_department_cancel_rate_ranking(df, top_n=20):
         "Tỷ lệ hủy TSD (%)",
         top_n=top_n,
         color_scale="Reds",
+        sort_ascending=sort_ascending,
     )
 
-def plot_employee_cancel_rate_ranking(df, top_n=20):
+def plot_employee_cancel_rate_ranking(df, top_n=10, sort_ascending=False):
     return _plot_rate_ranking(
         df,
         "Sale",
@@ -135,29 +168,31 @@ def plot_employee_cancel_rate_ranking(df, top_n=20):
         "Tỷ lệ hủy TSD (%)",
         top_n=top_n,
         color_scale="Reds",
+        sort_ascending=sort_ascending,
     )
 
-def plot_top_regions_bar(df, top_n=10):
+def plot_top_regions_bar(df, top_n=10, sort_ascending=False):
     if len(df) == 0:
         return px.bar(title="Không có dữ liệu")
         
-    region_counts = df['Xa_Phuong'].value_counts().nlargest(top_n).reset_index()
+    region_counts = df['Xa_Phuong'].value_counts().reset_index()
     region_counts.columns = ['Xã/Phường', 'Số lượng']
+    region_counts = _rank_limited(region_counts, 'Số lượng', top_n, sort_ascending)
     
     fig = px.bar(
         region_counts, 
         y='Xã/Phường', 
         x='Số lượng', 
         orientation='h',
-        title=f'Top {top_n} Xã/Phường có sản lượng cao nhất',
+        title=f'Top {top_n} Xã/Phường theo sản lượng',
         text='Số lượng',
         color='Số lượng',
         color_continuous_scale='Blues'
     )
-    fig.update_layout(yaxis={'categoryorder':'total ascending'})
+    fig.update_layout(yaxis={'categoryorder': _horizontal_yaxis_order(sort_ascending)})
     return fig
 
-def plot_avg_deploy_by_region(df, top_n=10):
+def plot_avg_deploy_by_region(df, top_n=10, sort_ascending=False):
     deployed_df = df[df['Ngay_online'].notna() & df['Ngay_tao'].notna()].copy()
     if len(deployed_df) == 0:
         return px.bar(title="Không có dữ liệu thời gian triển khai")
@@ -166,9 +201,7 @@ def plot_avg_deploy_by_region(df, top_n=10):
     deployed_df = deployed_df[deployed_df['Deploy_Days'] >= 0]
     
     avg_days = deployed_df.groupby('Xa_Phuong')['Deploy_Days'].mean().reset_index()
-    # Lấy top N xã phường có sản lượng cao nhất để xem thời gian trung bình của chúng
-    top_regions = df['Xa_Phuong'].value_counts().nlargest(top_n).index
-    avg_days_top = avg_days[avg_days['Xa_Phuong'].isin(top_regions)].sort_values('Deploy_Days', ascending=False)
+    avg_days_top = _rank_limited(avg_days, 'Deploy_Days', top_n, sort_ascending)
     
     fig = px.bar(
         avg_days_top, 
@@ -182,12 +215,15 @@ def plot_avg_deploy_by_region(df, top_n=10):
     )
     return fig
 
-def plot_prepaid_stacked_bar(df, top_n=10):
+def plot_prepaid_stacked_bar(df, top_n=10, sort_ascending=False):
     if len(df) == 0:
         return px.bar(title="Không có dữ liệu")
         
-    # Get top regions by volume
-    top_regions = df['Xa_Phuong'].value_counts().nlargest(top_n).index
+    # Get regions by volume in the selected sort direction.
+    top_regions = df['Xa_Phuong'].value_counts().reset_index()
+    top_regions.columns = ['Xa_Phuong', 'Số lượng']
+    top_regions = _rank_limited(top_regions, 'Số lượng', top_n, sort_ascending)
+    top_regions = top_regions['Xa_Phuong']
     df_top = df[df['Xa_Phuong'].isin(top_regions)].copy()
 
     prepaid_order = [
@@ -246,12 +282,13 @@ def plot_prepaid_stacked_bar(df, top_n=10):
     fig.update_traces(marker_line_color='white', marker_line_width=0.5)
     return fig
 
-def plot_department_pttb_bar(df):
+def plot_department_pttb_bar(df, sort_ascending=False):
     if len(df) == 0 or 'Phong' not in df.columns:
         return px.bar(title="Không có dữ liệu phòng")
 
     department_counts = df['Phong'].fillna("Khác").value_counts().reset_index()
     department_counts.columns = ['Phòng', 'Số PTTB']
+    department_counts = department_counts.sort_values('Số PTTB', ascending=sort_ascending)
 
     fig = px.bar(
         department_counts,
@@ -266,12 +303,12 @@ def plot_department_pttb_bar(df):
     )
     fig.update_layout(
         template='plotly_white',
-        yaxis={'categoryorder': 'total ascending'},
+        yaxis={'categoryorder': _horizontal_yaxis_order(sort_ascending)},
         coloraxis_showscale=False,
     )
     return fig
 
-def plot_employee_product_contribution(df, top_n=20):
+def plot_employee_product_contribution(df, top_n=20, sort_ascending=False):
     if len(df) == 0:
         return px.bar(title="Không có dữ liệu nhân sự")
 
@@ -308,7 +345,7 @@ def plot_employee_product_contribution(df, top_n=20):
         summary[col] = summary[col].astype(int)
 
     summary['Tổng đóng góp'] = summary[['PTTB Net', 'PTTB Truyền hình', 'PTTB V.Vip']].sum(axis=1)
-    summary = summary.sort_values('Tổng đóng góp', ascending=False).head(top_n)
+    summary = _rank_limited(summary, 'Tổng đóng góp', top_n, sort_ascending)
 
     chart_data = summary.melt(
         id_vars='Nhan_su',
@@ -335,4 +372,208 @@ def plot_employee_product_contribution(df, top_n=20):
     )
     fig.update_layout(template='plotly_white', legend_title_text='Loại PTTB')
     fig.update_xaxes(tickangle=-35)
+    return fig
+
+
+def plot_dvkh_bill_status(df, sort_ascending=False):
+    if len(df) == 0:
+        return px.pie(title="Không có dữ liệu DVKH")
+
+    status_counts = pd.DataFrame(
+        {
+            "Trạng thái": ["Đã thu", "Tồn"],
+            "Số lượng": [int(df["Da_thu"].sum()), int((~df["Da_thu"]).sum())],
+        }
+    )
+    status_counts = status_counts.sort_values("Số lượng", ascending=sort_ascending)
+
+    fig = px.pie(
+        status_counts,
+        values="Số lượng",
+        names="Trạng thái",
+        title="Cơ cấu bill thu / tồn",
+        color="Trạng thái",
+        color_discrete_map={"Đã thu": "#28a745", "Tồn": "#dc3545"},
+        hole=0.4,
+    )
+    fig.update_traces(sort=False)
+    return fig
+
+
+def plot_dvkh_collector_ranking(df, top_n=10, sort_ascending=False):
+    if len(df) == 0:
+        return px.bar(title="Không có dữ liệu nhân sự thu bill")
+
+    collected_df = df[df["Da_thu"]]
+    if len(collected_df) == 0:
+        return px.bar(title="Không có dữ liệu bill đã thu")
+
+    collector_counts = collected_df["Nhan_vien_thu"].value_counts().reset_index()
+    collector_counts.columns = ["Nhân sự", "Số bill thu"]
+    collector_counts = _rank_limited(collector_counts, "Số bill thu", top_n, sort_ascending)
+
+    fig = px.bar(
+        collector_counts,
+        y="Nhân sự",
+        x="Số bill thu",
+        orientation="h",
+        title=f"Xếp hạng nhân sự thu bill (Top {top_n})",
+        text="Số bill thu",
+        color="Số bill thu",
+        color_continuous_scale="Greens",
+    )
+    fig.update_layout(
+        template="plotly_white",
+        height=430,
+        margin={"l": 145, "r": 70, "t": 58, "b": 58},
+        yaxis={"categoryorder": _horizontal_yaxis_order(sort_ascending), "automargin": True},
+        coloraxis_showscale=False,
+        font={"size": 11},
+        title={"font": {"size": 15}},
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    return fig
+
+
+def plot_dvkh_outstanding_by_collector(df, top_n=10, sort_ascending=False):
+    if len(df) == 0:
+        return px.bar(title="Không có dữ liệu bill tồn")
+
+    outstanding_df = df[~df["Da_thu"]]
+    if len(outstanding_df) == 0:
+        return px.bar(title="Không có bill tồn")
+
+    collector_counts = outstanding_df["Nhan_vien_thu"].value_counts().reset_index()
+    collector_counts.columns = ["Nhân sự", "Số bill tồn"]
+    collector_counts = _rank_limited(collector_counts, "Số bill tồn", top_n, sort_ascending)
+
+    fig = px.bar(
+        collector_counts,
+        y="Nhân sự",
+        x="Số bill tồn",
+        orientation="h",
+        title=f"Xếp hạng nhân sự còn bill tồn (Top {top_n})",
+        text="Số bill tồn",
+        color="Số bill tồn",
+        color_continuous_scale="Reds",
+    )
+    fig.update_layout(
+        template="plotly_white",
+        height=430,
+        margin={"l": 145, "r": 70, "t": 58, "b": 58},
+        yaxis={"categoryorder": _horizontal_yaxis_order(sort_ascending), "automargin": True},
+        coloraxis_showscale=False,
+        font={"size": 11},
+        title={"font": {"size": 15}},
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    return fig
+
+
+def plot_dvkh_payment_method(df, top_n=10, sort_ascending=False):
+    if len(df) == 0:
+        return px.bar(title="Không có dữ liệu phương thức thanh toán")
+
+    collected_df = df[df["Da_thu"]]
+    method_counts = collected_df["Phuong_thuc_TT"].value_counts().reset_index()
+    method_counts.columns = ["Phương thức", "Số bill"]
+    method_counts = _rank_limited(method_counts, "Số bill", top_n, sort_ascending)
+
+    fig = px.bar(
+        method_counts,
+        y="Phương thức",
+        x="Số bill",
+        orientation="h",
+        title=f"Phương thức thu bill (Top {top_n})",
+        text="Số bill",
+        color="Số bill",
+        color_continuous_scale="Blues",
+    )
+    fig.update_layout(
+        template="plotly_white",
+        yaxis={"categoryorder": _horizontal_yaxis_order(sort_ascending), "automargin": True},
+        coloraxis_showscale=False,
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    return fig
+
+
+def plot_dvkh_payment_form(df, top_n=10, sort_ascending=False):
+    if len(df) == 0:
+        return px.bar(title="Không có dữ liệu hình thức thanh toán")
+
+    collected_df = df[df["Da_thu"]]
+    form_counts = collected_df["Hinh_thuc_TT_DVKH"].value_counts().reset_index()
+    form_counts.columns = ["Hình thức", "Số bill"]
+    form_counts = _rank_limited(form_counts, "Số bill", top_n, sort_ascending)
+
+    fig = px.bar(
+        form_counts,
+        y="Hình thức",
+        x="Số bill",
+        orientation="h",
+        title=f"Hình thức thu bill (Top {top_n})",
+        text="Số bill",
+        color="Số bill",
+        color_continuous_scale="Purples",
+    )
+    fig.update_layout(
+        template="plotly_white",
+        yaxis={"categoryorder": _horizontal_yaxis_order(sort_ascending), "automargin": True},
+        coloraxis_showscale=False,
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    return fig
+
+
+def plot_dvkh_region_collection_rate(df, top_n=10, sort_ascending=False):
+    if len(df) == 0:
+        return px.bar(title="Không có dữ liệu xã/phường")
+
+    grouped = (
+        df.groupby("Khu_vuc_DVKH", dropna=False)
+        .agg(Tong_bill=("Da_thu", "size"), Bill_thu=("Da_thu", "sum"))
+        .reset_index()
+    )
+    grouped["Ty_le_thu"] = grouped["Bill_thu"] / grouped["Tong_bill"] * 100
+    grouped = _rank_limited(
+        grouped,
+        ["Ty_le_thu", "Bill_thu", "Tong_bill"],
+        top_n,
+        sort_ascending,
+    )
+    grouped["Nhan_hien_thi"] = grouped.apply(
+        lambda row: f"{row['Ty_le_thu']:.1f}% ({int(row['Bill_thu'])}/{int(row['Tong_bill'])})",
+        axis=1,
+    )
+
+    fig = px.bar(
+        grouped,
+        y="Khu_vuc_DVKH",
+        x="Ty_le_thu",
+        orientation="h",
+        title=f"Xếp hạng xã/phường theo tỷ lệ thu bill (Top {top_n})",
+        text="Nhan_hien_thi",
+        color="Ty_le_thu",
+        color_continuous_scale="Greens",
+        labels={
+            "Khu_vuc_DVKH": "Xã/Phường",
+            "Ty_le_thu": "Tỷ lệ thu bill (%)",
+            "Nhan_hien_thi": "Tỷ lệ thu bill",
+        },
+        hover_data={
+            "Khu_vuc_DVKH": False,
+            "Ty_le_thu": ":.1f",
+            "Bill_thu": True,
+            "Tong_bill": True,
+            "Nhan_hien_thi": False,
+        },
+    )
+    fig.update_layout(
+        template="plotly_white",
+        yaxis={"categoryorder": _horizontal_yaxis_order(sort_ascending), "automargin": True},
+        coloraxis_showscale=False,
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_xaxes(range=[0, max(105, grouped["Ty_le_thu"].max() * 1.15 if len(grouped) else 100)])
     return fig
